@@ -1,0 +1,12 @@
+---
+title: "Dokumentation"
+output: html_notebook
+---
+
+Der Anteil der Arbeiter berechnet sich auf Basis der aktiv erwerbstätigen. Das umfast Selbstständige, Arbeiter, Angestellte und sonstige unselbstständig Erwerbstätige
+
+Die Analysen zum Alter beziehen sich auf den Anteil der jeweiligen Altersgruppe an allen Österreichern im Wahlalter. Das sind Österreicher über 16 Jahre und mit österreichischer Staatsbürgerschaft. 
+
+```{r}
+plot(cars)
+```
