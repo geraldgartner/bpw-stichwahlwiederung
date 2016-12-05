@@ -1,0 +1,5 @@
+.RProfile
+.httr-oauth
+*.swp
+.Rproj.user
+.Rhistory
