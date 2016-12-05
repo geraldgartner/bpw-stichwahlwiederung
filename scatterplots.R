@@ -40,13 +40,22 @@ gemeindedaten <- gs_key("1I8oAyCA4OTGLjnCINtvAzeXc-SU4n72WUvk5f8ZkExQ")
 
 #Alle Worksheets aus dem GSheet Gemeindedaten importieren
 demografie <- gs_read(gemeindedaten, ws = 'pivoteddem', col_names = TRUE)
+Sys.sleep(3)
 v1stichwahl <- gs_read(gemeindedaten, ws = "stichwahl-v1", col_names = TRUE)
+Sys.sleep(3)
 v2stichwahl <- gs_read(gemeindedaten, ws = "stichwahl-v2", col_names = TRUE)
+Sys.sleep(3)
 wahlgang1 <- gs_read(gemeindedaten, ws = "wahlgang-v1", col_names = TRUE)
+Sys.sleep(3)
 kaufkraft <- gs_read(gemeindedaten, ws = "kaufkraft", col_names = TRUE)
+Sys.sleep(3)
 medianeinkommen <- gs_read(gemeindedaten, ws = "medianeinkommen", col_names = TRUE)
+Sys.sleep(3)
 alter <- gs_read(gemeindedaten, ws = 'alter', col_names = TRUE)
+Sys.sleep(3)
 wahltagsbefragungen <- gs_read(gemeindedaten, ws = 'wahltagsbefragungen', col_names = TRUE)
+Sys.sleep(3)
+vdb_bgms <- gs_read(gemeindedaten, ws = 'bgmfvdb', col_names = TRUE)
 
 #Reshapen der Wahlergebnisse auf Long-Format
 
@@ -59,8 +68,18 @@ v1stichwahl <- v1stichwahl %>% gather(kandidat, ergebnis, hofer:vdb)
 v1stichwahl$pct <- v1stichwahl$ergebnis/v1stichwahl$gueltig 
 
 #Stichwahl 2
-v2stichwahl <- v2stichwahl %>% gather(kandidat, ergebnis, hofer:vdb)
-v2stichwahl$pct <- v2stichwahl$ergebnis/v2stichwahl$gueltig 
+#v2stichwahl$gueltig = v2stichwahl$hofer + v2stichwahl$vdb
+v2stichwahl$gueltige_sw1 = v2stichwahl$hofer_sw1 + v2stichwahl$vdb_sw1
+
+
+v2stichwahl = v2stichwahl %>% gather(kandidat, ergebnis, hofer:vdb) %>%
+  gather(kandidat_sw1, ergebnis_sw1, hofer_sw1:vdb_sw1) %>%
+  mutate(kandidat_sw1=replace(kandidat_sw1, kandidat_sw1=='hofer_sw1', 'hofer')) %>%
+  mutate(kandidat_sw1=replace(kandidat_sw1, kandidat_sw1=='vdb_sw1', 'vdb')) %>%
+  filter(kandidat_sw1==kandidat)
+v2stichwahl$pct <- v2stichwahl$ergebnis/v2stichwahl$gueltige
+v2stichwahl$pct_sw1 <- v2stichwahl$ergebnis_sw1/v2stichwahl$gueltige_sw1
+v2stichwahl$pctgewinn <- v2stichwahl$pct - v2stichwahl$pct_sw1
 
 
 #Anlegen der Prozentspalten für die Korrelationen-Analyse
@@ -97,26 +116,30 @@ pctalter <- alter[ , c("gkz", "junge_pct", "ueber60_pct")]
 
 
 #Mergen der Sheets für weitere Analyse
-dem <- merge(x=pctdemografie, y=v1stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
-alt <- merge(x=pctalter, y=v1stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
-kk <- merge(x=kaufkraft, y=v1stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
+dem <- merge(x=pctdemografie, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
+alt <- merge(x=alter, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
+# kk <- merge(x=kaufkraft, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
 
 
 #Filtern der Kandiaten vor der Korrelationsmatrix
 
 demhofer <- filter(dem, dem$kandidat=="hofer")
+demhofer <- demhofer[, !(colnames(demhofer) %in% c('kandidat', 'kandidat_sw1', 'name' ))]
 demvdb <- filter(dem, dem$kandidat=="vdb" )
+
+
 
 althofer <- filter(alt, alt$kandidat=="hofer")
 altbvdb <- filter(alt, alt$kandidat=="vdb" )
+althofer <- althofer[, !(colnames(althofer) %in% c('vdb_sw1', 'hofer_sw1', 'wb_sw1', 'wahlberechtigte', 'name', 'abgegebene', 'gueltige', 'gueltig', 'gueltig_sw1', 'ergebnis', 'kandidat', 'ergebnis', 'ungueltige', 'wb' ))]
 
-demhofer$wb_pct <- demhofer$gueltig/demhofer$wb
+#demhofer$wb_pct <- demhofer$gueltig/demhofer$wb
 
-demhofercor <- demhofer[, c(2:11, 19,20)]
-demvdbcor <- demvdb[, c(2:11, 19)]
+ demhofercor <- demhofer #[, c(2:11, 19,20)]
+ demvdbcor <- demvdb #[, c(2:11, 19)]
 
-althofercor <- althofer[, c(2:3, 11)]
-altvdbcor <- altbvdb[, c(2:3, 11)]
+ althofercor <- althofer#[, c(2:3, 11)]
+ altvdbcor <- altbvdb#[, c(2:3, 11)]
 
 #KORRELATIONEN-TABELLE FÜR HOFER
 
@@ -261,12 +284,18 @@ wahltagsbefragungen$margin <-  wahltagsbefragungen$vdb-wahltagsbefragungen$hofer
 kaufkraftdaten <- tbl_df(kk) 
 library(dplyr)
 
-kkagg <- kaufkraftdaten %>%
-  spread(kandidat, ergebnis)
+#kkagg <- kaufkraftdaten %>%
+#  spread(kandidat, ergebnis)
+#
+#  group_by(kkiproew) %>%
+#  summarise(sumstimmen = sum(ergebnis), sumgueltig = sum(gueltig), na.rm = TRUE) 
+#
+#topland$prozent <- c((topland$Sumstimmen/topland$SumGueltig))
 
-  group_by(kkiproew) %>%
-  summarise(sumstimmen = sum(ergebnis), sumgueltig = sum(gueltig). na.rm = TRUE) 
 
-topland$prozent <- c((topland$Sumstimmen/topland$SumGueltig))
+ggplot(alt[alt$kandidat=='hofer',], aes(x=as.factor(gemgroesse_type),y=pctgewinn)) + geom_dotplot(binaxis="y", stackdir="center",dotsize=0.5, binwidth=0.0025) + stat_summary(method="lm")
 
 
+alt_nona = alt[!is.na(alt$gemgroesse_type),]
+alt_nona$gemgroesse_type = as.character(alt_nona$gemgroesse_type)
+altlm = lm(pctgewinn ~ gemgroesse_type, alt_nona[alt_nona$kandidat=='hofer',])
