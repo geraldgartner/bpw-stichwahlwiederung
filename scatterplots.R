@@ -118,7 +118,7 @@ pctalter <- alter[ , c("gkz", "junge_pct", "ueber60_pct")]
 #Mergen der Sheets für weitere Analyse
 dem <- merge(x=pctdemografie, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
 alt <- merge(x=alter, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
-# kk <- merge(x=kaufkraft, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
+kk <- merge(x=kaufkraft, y=v2stichwahl, by.x = "gkz", by.y = "gkz", incomparables = NA)
 
 
 #Filtern der Kandiaten vor der Korrelationsmatrix
@@ -299,3 +299,10 @@ ggplot(alt[alt$kandidat=='hofer',], aes(x=as.factor(gemgroesse_type),y=pctgewinn
 alt_nona = alt[!is.na(alt$gemgroesse_type),]
 alt_nona$gemgroesse_type = as.character(alt_nona$gemgroesse_type)
 altlm = lm(pctgewinn ~ gemgroesse_type, alt_nona[alt_nona$kandidat=='hofer',])
+
+
+
+summary(lm(pctgewinn ~ kkiproew, kk[kk$kandidat=='vdb',]))
+ggplot(kk[kk$kandidat=='vdb',], aes(x=kkiproew,y=pctgewinn)) + geom_dotplot(binaxis="y", stackdir="center",dotsize=0.5, binwidth=0.0025) + stat_summary(method="lm")
+
+
